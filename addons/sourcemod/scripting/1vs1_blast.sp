@@ -14,7 +14,7 @@ char g_szCurrentKit[64] = "KIT_M4A4";
 
 public Plugin myinfo = 
 {
-	name = "N vs N Blast Manager",
+	name = "VSBlast",
 	author = PLUGIN_AUTHOR,
 	description = "This plugin should manage these kinds of tournamnets.",
 	version = PLUGIN_VERSION,
