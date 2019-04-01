@@ -2,19 +2,18 @@
 #include <sdktools>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.0 (Build 1)"
+#define PLUGIN_VERSION "0.0.1 (Build 2)"
 
 
 // Global Variables
 
 char g_szWeaponKitPath[PLATFORM_MAX_PATH];
 char g_szWeaponCfgPrePath[PLATFORM_MAX_PATH];
-char g_szCurrentKit[64] = "KIT_M4A4";
+char g_szCurrentKit[64] = "";
 
 bool g_bIsWarmupStarted = false;
 
 ArrayList g_arKitList;
-
 
 
 
@@ -28,6 +27,9 @@ public Plugin myinfo =
 
 
 public void OnPluginStart(){
+
+    RegAdminCmd("sm_vb", VSBlast, ADMFLAG_BAN, "Open blast menu.");
+
 
     BuildPath(Path_SM, g_szWeaponKitPath, sizeof(g_szWeaponKitPath), "configs/wkits/kits.cfg");
     Format(g_szWeaponCfgPrePath, sizeof(g_szWeaponCfgPrePath), "VSBlast/");
@@ -51,62 +53,14 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
             g_bIsWarmupStarted = false;
         }
     }
-
-
-
-
-
-
-    char CurrentConfig[256], ExecuteConfig[256];
-	GetWeaponConfig(g_szCurrentKit, CurrentConfig, sizeof(CurrentConfig));
-    Format(ExecuteConfig, sizeof(ExecuteConfig), "%s/%s", g_szWeaponCfgPrePath, CurrentConfig);
-    ExecuteConfig(ExecuteConfig);
     return Plugin_Continue;
 }
 
+public Action VSBlast(int client, int args){
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ShowMenu(client);
+    return Plugin_Handled;
+}
 
 
 
@@ -117,11 +71,22 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
 public void OnWarmupStarted(){
 
     //Your code in here
+    PrintToChatAll(" \x02[VSBlast] \x01 Type !vb to see available kits.");
 }
 
 public void OnWarmupEnded(){
 
     //Your code in here
+    char CurrentConfig[256], ExecuteConfig[256];
+    
+    GetWeaponConfig(g_szCurrentKit, CurrentConfig, sizeof(CurrentConfig));
+    if(!StrEqual(CurrentConfig, "", false)){
+        Format(ExecuteConfig, sizeof(ExecuteConfig), "%s/%s", g_szWeaponCfgPrePath, CurrentConfig);
+        ExecuteCfg(ExecuteConfig);
+
+    }else{
+        PrintToChatAll(" \x02[VSBlast] \x01 Unable to load weapon config.");
+    }
     g_arKitList.Clear();
 }
 
@@ -147,12 +112,12 @@ stock void GetModeList(){
     CloseHandle(kv);
 }
 
-stock void ShowVoteMenu(int client){
+stock void ShowMenu(int client){
 
     Handle menu = CreateMenu(ModeVoteMenu);
     SetMenuTitle(menu, "Choose your desire mode: ");
     DisplayMenu(menu, client, MENU_TIME_FOREVER);
-	SetMenuExitButton(menu, true);
+    SetMenuExitButton(menu, true);
 
     for(int i=0;i<g_arKitList.Length;i++){
 
@@ -165,7 +130,7 @@ stock void ShowVoteMenu(int client){
 }
 
 
-public int SkinMenu(Handle menu, MenuAction action, int param1, int param2) {
+public int ModeVoteMenu(Handle menu, MenuAction action, int param1, int param2) {
     
 	switch (action) {
 
@@ -173,12 +138,18 @@ public int SkinMenu(Handle menu, MenuAction action, int param1, int param2) {
 
 			char item[64];
 			GetMenuItem(menu, param2, item, sizeof(item));
-			KvGotoFirstSubKey(kv, false);
+            SetCurrentKit(item);
+            
         }
         case MenuAction_End: {
             CloseHandle(menu);
 		}
     }
+}
+
+stock void SetCurrentKit(char[] kit){
+
+    Format(g_szCurrentKit, sizeof(g_szCurrentKit), "%s", kit);
 }
 
 
@@ -229,27 +200,26 @@ stock bool isValidClient(int client){
 
 }
 
-/* @Deprecated
-stock void GetWeaponConfig(har[] kit, char[] kitStore, int maxlen){
+stock void GetWeaponConfig(char[] kit, char[] kitStore, int maxlen){
 
     Handle kv = CreateKeyValues("weapons");
     FileToKeyValues(kv, g_szWeaponKitPath);
 
     if(KvJumpToKey(kv, kit, false)){
 
-        KvGetString(kv, "config", kitStore, maxlen, g_szCurrentKit);
+        KvGetString(kv, "config", kitStore, maxlen, "");
         CloseHandle(kv);
     }else{
         CloseHandle(kv);
     }
 }
 
-stock void ExecuteConfig(char[] configPath){
+stock void ExecuteCfg(char[] configPath){
 
     ServerCommand("exec %s", configPath);
     return;
 }
-*/
+
 
 
 stock void RemoveAllWeapons(int client) {
