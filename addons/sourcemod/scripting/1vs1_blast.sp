@@ -1,8 +1,13 @@
 #include <sourcemod>
 #include <sdktools>
+#include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.1 (Build 2)"
+#define PLUGIN_VERSION "0.0.2 (Build 2)"
+
+#define MAX_TEAMS 4
+#define MAX_TEAMS_TR 2
+#define MAX_TEAMS_CT 3
 
 
 // Global Variables
@@ -11,7 +16,11 @@ char g_szWeaponKitPath[PLATFORM_MAX_PATH];
 char g_szWeaponCfgPrePath[PLATFORM_MAX_PATH];
 char g_szCurrentKit[64] = "";
 
+ConVar g_cMaxWinRounds = null;
+
 bool g_bIsWarmupStarted = false;
+
+int g_iRoundNumber[MAX_TEAMS] = 1;
 
 ArrayList g_arKitList;
 
@@ -33,9 +42,13 @@ public void OnPluginStart(){
 
     BuildPath(Path_SM, g_szWeaponKitPath, sizeof(g_szWeaponKitPath), "configs/wkits/kits.cfg");
     Format(g_szWeaponCfgPrePath, sizeof(g_szWeaponCfgPrePath), "VSBlast/");
+
     HookEvent("round_start", OnNewRound, EventHookMode_Pre);
+    HookEvent("round_end", OnRoundEnd, EventHookMode_Pre);
 
     g_arKitList = new ArrayList(128);
+
+    g_cMaxWinRounds = CreateConVar("vb_maxwin", "10", "Max number of rounds a team must win to finish the game");
 }
 
 
@@ -56,6 +69,34 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
     return Plugin_Continue;
 }
 
+public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
+
+    int RoundEndReason = event.GetInt("reason");
+    if(RoundEndReason != CSRoundEnd_GameStart){
+        int winner = event.GetInt("winner");
+        g_iRoundNumber[winner]++;
+
+        if(GetConVarInt(g_cMaxWinRounds) >= g_iRoundNumber[winner]){
+            EndGame();
+
+            if(winner == MAX_TEAMS_CT){
+                PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won the match.");
+                PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
+            }else if(winner == MAX_TEAMS_TR){
+                PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won the match.");
+                PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
+            }
+        }
+
+    }else{
+        g_iRoundNumber[MAX_TEAMS_TR] = 1;
+        g_iRoundNumber[MAX_TEAMS_CT] = 1;
+    }
+
+
+
+}
+
 public Action VSBlast(int client, int args){
 
     ShowMenu(client);
@@ -72,6 +113,10 @@ public void OnWarmupStarted(){
 
     //Your code in here
     PrintToChatAll(" \x02[VSBlast] \x01 Type !vb to see available kits.");
+
+
+    g_iRoundNumber[MAX_TEAMS_TR] = 1;
+    g_iRoundNumber[MAX_TEAMS_CT] = 1;
 }
 
 public void OnWarmupEnded(){
@@ -95,6 +140,17 @@ public void OnWarmupEnded(){
 //////////////////////////////////////////////////////
 //                     Functions
 //////////////////////////////////////////////////////
+
+
+stock void EndGame(){
+
+    ServerCommand("mp_maxrounds 0");
+    CreateTimer(5.0, Timer_RestartGame);
+}
+
+public Action Timer_RestartGame(Handle timer){
+    ServerCommand("mp_warmup_start");
+}
 
 stock void GetModeList(){
 
@@ -139,7 +195,7 @@ public int ModeVoteMenu(Handle menu, MenuAction action, int param1, int param2) 
 			char item[64];
 			GetMenuItem(menu, param2, item, sizeof(item));
             SetCurrentKit(item);
-            
+
         }
         case MenuAction_End: {
             CloseHandle(menu);
