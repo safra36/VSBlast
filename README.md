@@ -10,6 +10,11 @@ Furthur instructions will be added as the creation goes on.
 - sm_vb or !vb
 This will open up a menu that you can choose kits.
 
+## ConVars
+
+- vb_maxwin 10
+Max number of rounds the winner must win to finish the game.
+
 ## Notes
 
 - You should always start warmup after each map change.
