@@ -3,7 +3,7 @@
 #include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.2 (Build 2)"
+#define PLUGIN_VERSION "0.0.2 (Build 4)"
 
 #define MAX_TEAMS 4
 #define MAX_TEAMS_TR 2
@@ -172,8 +172,6 @@ stock void ShowMenu(int client){
 
     Handle menu = CreateMenu(ModeVoteMenu);
     SetMenuTitle(menu, "Choose your desire mode: ");
-    DisplayMenu(menu, client, MENU_TIME_FOREVER);
-    SetMenuExitButton(menu, true);
 
     for(int i=0;i<g_arKitList.Length;i++){
 
@@ -181,6 +179,9 @@ stock void ShowMenu(int client){
         g_arKitList.GetString(i, VoteMenuItem, sizeof(VoteMenuItem));
         AddMenuItem(menu, VoteMenuItem, VoteMenuItem);
     }
+
+    SetMenuExitButton(menu, true);
+    DisplayMenu(menu, client, MENU_TIME_FOREVER);
 
     g_arKitList.Clear();
 }
