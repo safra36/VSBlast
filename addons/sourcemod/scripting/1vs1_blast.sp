@@ -126,7 +126,7 @@ public void OnWarmupEnded(){
     
     GetWeaponConfig(g_szCurrentKit, CurrentConfig, sizeof(CurrentConfig));
     if(!StrEqual(CurrentConfig, "", false)){
-        Format(ExecuteConfig, sizeof(ExecuteConfig), "%s/%s", g_szWeaponCfgPrePath, CurrentConfig);
+        Format(ExecuteConfig, sizeof(ExecuteConfig), "%s%s", g_szWeaponCfgPrePath, CurrentConfig);
         ExecuteCfg(ExecuteConfig);
 
     }else{
