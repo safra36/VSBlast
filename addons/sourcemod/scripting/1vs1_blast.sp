@@ -3,7 +3,7 @@
 #include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.3 (Build 13)"
+#define PLUGIN_VERSION "0.0.5 (Build 18)"
 
 #define MAX_TEAMS 4
 #define MAX_TEAMS_TR 2
@@ -42,6 +42,7 @@ public Plugin myinfo =
 public void OnPluginStart(){
 
     RegAdminCmd("sm_vb", VSBlast, ADMFLAG_BAN, "Open blast menu.");
+    RegAdminCmd("sm_live", VSBlast_EndWarmup, ADMFLAG_BAN, "Ends warmup to begin the match");
 
 
     BuildPath(Path_SM, g_szWeaponKitPath, sizeof(g_szWeaponKitPath), "configs/wkits/kits.cfg");
@@ -75,14 +76,14 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
                 g_bIsWarmupStarted = false;
             }
     }
+
     return Plugin_Continue;
 }
+
 
 public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
 
     int RoundEndReason = event.GetInt("reason");
-    PrintToChatAll("CT %d, TR %d", g_iRoundNumber[MAX_TEAMS_CT], g_iRoundNumber[MAX_TEAMS_TR]);
-    PrintToChatAll("%d", RoundEndReason);
     if(RoundEndReason == TR_WIN){
         //int winner = event.GetInt("winner");
         g_iRoundNumber[MAX_TEAMS_TR]++;
@@ -90,7 +91,7 @@ public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
 
         if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_TR]){
             EndGame();
-            g_szCurrentKit[64] = "";
+            Format(g_szCurrentKit, sizeof(g_szCurrentKit), "");
 
             PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won the match.");
             PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
@@ -103,8 +104,8 @@ public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
 
         if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_CT]){
             EndGame();
-            g_szCurrentKit[64] = "";
-            
+            Format(g_szCurrentKit, sizeof(g_szCurrentKit), "")
+
             PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won the match.");
             PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
         }
@@ -124,6 +125,10 @@ public Action VSBlast(int client, int args){
     return Plugin_Handled;
 }
 
+public Action VSBlast_EndWarmup(int client, int args){
+    EndWarmup();
+    return Plugin_Handled;
+}
 
 
 //////////////////////////////////////////////////////
@@ -138,6 +143,9 @@ public void OnWarmupStarted(){
 
     g_iRoundNumber[MAX_TEAMS_TR] = 1;
     g_iRoundNumber[MAX_TEAMS_CT] = 1;
+
+    ServerCommand("mp_warmuptime 900");
+    ServerCommand("mp_warmup_pausetimer 1");
 }
 
 public void OnWarmupEnded(){
@@ -150,6 +158,8 @@ public void OnWarmupEnded(){
         Format(ExecuteConfig, sizeof(ExecuteConfig), "%s%s", g_szWeaponCfgPrePath, CurrentConfig);
         ExecuteCfg(ExecuteConfig);
 
+        RestartGame(10);
+        PrintToChatAll(" \x02[VSBlast] \x01 Match will be live in 10 seconds.");
     }else{
         PrintToChatAll(" \x02[VSBlast] \x01 Unable to load weapon config.");
     }
@@ -170,6 +180,14 @@ public void OnRoundRestart(){
 //                     Functions
 //////////////////////////////////////////////////////
 
+
+stock void EndWarmup(){
+    ServerCommand("mp_warmup_end");
+}
+
+stock void RestartGame(int sec){
+    ServerCommand("mp_restartgame %d", sec);
+}
 
 stock void EndGame(){
 
