@@ -3,11 +3,14 @@
 #include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.2 (Build 5)"
+#define PLUGIN_VERSION "0.0.3 (Build 13)"
 
 #define MAX_TEAMS 4
 #define MAX_TEAMS_TR 2
 #define MAX_TEAMS_CT 3
+
+#define CT_WIN 8
+#define TR_WIN 9
 
 
 // Global Variables
@@ -17,10 +20,11 @@ char g_szWeaponCfgPrePath[PLATFORM_MAX_PATH];
 char g_szCurrentKit[64] = "";
 
 ConVar g_cMaxWinRounds = null;
+ConVar g_cRoundRestart = null;
 
 bool g_bIsWarmupStarted = false;
 
-int g_iRoundNumber[MAX_TEAMS] = 1;
+int g_iRoundNumber[MAX_TEAMS] = 0;
 
 ArrayList g_arKitList;
 
@@ -49,22 +53,27 @@ public void OnPluginStart(){
     g_arKitList = new ArrayList(128);
 
     g_cMaxWinRounds = CreateConVar("vb_maxwin", "10", "Max number of rounds a team must win to finish the game");
+    g_cRoundRestart = FindConVar("mp_restartgame");
+    HookConVarChange(g_cRoundRestart, ConVar_RoundRestart);
 }
 
+public void ConVar_RoundRestart(ConVar convar, const char[] oldValue, const char[] newValue){
+    OnRoundRestart();
+}
 
 
 
 public Action OnNewRound(Event event, const char[] name, bool dontBroadcast) 
 {
     // Check for warmup
-    if(!g_bIsWarmupStarted){
-        if (GameRules_GetProp("m_bWarmupPeriod") == 1) {
+    if (GameRules_GetProp("m_bWarmupPeriod") == 1) {
             g_bIsWarmupStarted = true;
             OnWarmupStarted();
-        }else{
-            OnWarmupEnded();
-            g_bIsWarmupStarted = false;
-        }
+     }else{
+            if(g_bIsWarmupStarted){
+                OnWarmupEnded();
+                g_bIsWarmupStarted = false;
+            }
     }
     return Plugin_Continue;
 }
@@ -72,25 +81,37 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
 public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
 
     int RoundEndReason = event.GetInt("reason");
-    if(RoundEndReason != CSRoundEnd_GameStart){
-        int winner = event.GetInt("winner");
-        g_iRoundNumber[winner]++;
+    PrintToChatAll("CT %d, TR %d", g_iRoundNumber[MAX_TEAMS_CT], g_iRoundNumber[MAX_TEAMS_TR]);
+    PrintToChatAll("%d", RoundEndReason);
+    if(RoundEndReason == TR_WIN){
+        //int winner = event.GetInt("winner");
+        g_iRoundNumber[MAX_TEAMS_TR]++;
+        PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won this round!");
 
-        if(GetConVarInt(g_cMaxWinRounds) >= g_iRoundNumber[winner]){
+        if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_TR]){
             EndGame();
+            g_szCurrentKit[64] = "";
 
-            if(winner == MAX_TEAMS_CT){
-                PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won the match.");
-                PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
-            }else if(winner == MAX_TEAMS_TR){
-                PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won the match.");
-                PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
-            }
+            PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won the match.");
+            PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
+        }
+
+    }else if(RoundEndReason == CT_WIN){
+        //int winner = event.GetInt("winner");
+        g_iRoundNumber[MAX_TEAMS_CT]++;
+        PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won this round!");
+
+        if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_CT]){
+            EndGame();
+            g_szCurrentKit[64] = "";
+            
+            PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won the match.");
+            PrintToChatAll(" \x02[VSBlast] \x01 Restarting match in 5 seconds.");
         }
 
     }else{
-        g_iRoundNumber[MAX_TEAMS_TR] = 1;
-        g_iRoundNumber[MAX_TEAMS_CT] = 1;
+        g_iRoundNumber[MAX_TEAMS_TR] = 0;
+        g_iRoundNumber[MAX_TEAMS_CT] = 0;
     }
 
 
@@ -133,6 +154,14 @@ public void OnWarmupEnded(){
         PrintToChatAll(" \x02[VSBlast] \x01 Unable to load weapon config.");
     }
     g_arKitList.Clear();
+}
+
+public void OnRoundRestart(){
+
+    //Your code in here
+    PrintToChatAll(" \x02[VSBlast] \x01 Round has been restarted.");
+    g_iRoundNumber[MAX_TEAMS_TR] = 0;
+    g_iRoundNumber[MAX_TEAMS_CT] = 0;
 }
 
 
