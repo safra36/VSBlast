@@ -3,7 +3,7 @@
 #include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.5 (Build 26)"
+#define PLUGIN_VERSION "0.0.5 (Build 27)"
 
 #define MAX_TEAMS 4
 #define MAX_TEAMS_TR 2
@@ -169,7 +169,8 @@ public void OnWarmupEnded(){
         PrintToChatAll(" \x02[VSBlast] \x01 Unable to load weapon config.");
     }
     g_arKitList.Clear();
-    RestartRoundCounter()
+    RestartRoundCounter();
+    g_bOnFirstRound = true;
 }
 
 public void OnRoundRestart(){
