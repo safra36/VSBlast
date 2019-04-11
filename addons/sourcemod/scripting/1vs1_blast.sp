@@ -3,7 +3,7 @@
 #include <cstrike>
 
 #define PLUGIN_AUTHOR "noBrain"
-#define PLUGIN_VERSION "0.0.5 (Build 18)"
+#define PLUGIN_VERSION "0.0.5 (Build 26)"
 
 #define MAX_TEAMS 4
 #define MAX_TEAMS_TR 2
@@ -23,6 +23,7 @@ ConVar g_cMaxWinRounds = null;
 ConVar g_cRoundRestart = null;
 
 bool g_bIsWarmupStarted = false;
+bool g_bOnFirstRound = false;
 
 int g_iRoundNumber[MAX_TEAMS] = 0;
 
@@ -42,7 +43,7 @@ public Plugin myinfo =
 public void OnPluginStart(){
 
     RegAdminCmd("sm_vb", VSBlast, ADMFLAG_BAN, "Open blast menu.");
-    RegAdminCmd("sm_live", VSBlast_EndWarmup, ADMFLAG_BAN, "Ends warmup to begin the match");
+    RegAdminCmd("sm_vblive", VSBlast_EndWarmup, ADMFLAG_BAN, "Ends warmup to begin the match");
 
 
     BuildPath(Path_SM, g_szWeaponKitPath, sizeof(g_szWeaponKitPath), "configs/wkits/kits.cfg");
@@ -77,6 +78,14 @@ public Action OnNewRound(Event event, const char[] name, bool dontBroadcast)
             }
     }
 
+    PrintHintTextToAll("<font color='#9900cc'>1 VS 1 Blast</font> Pro Series\n<font color='#33ccff'>CT: </font> %d | <font color='#ff3300'>T: </font> %d ", 
+            g_iRoundNumber[MAX_TEAMS_CT], g_iRoundNumber[MAX_TEAMS_TR]);
+
+    if(g_bOnFirstRound){
+        RestartRoundCounter();
+        g_bOnFirstRound = false;
+    }
+
     return Plugin_Continue;
 }
 
@@ -89,7 +98,7 @@ public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
         g_iRoundNumber[MAX_TEAMS_TR]++;
         PrintToChatAll(" \x02[VSBlast] \x01 Terrorists has won this round!");
 
-        if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_TR]){
+        if(g_iRoundNumber[MAX_TEAMS_TR] >= GetConVarInt(g_cMaxWinRounds)){
             EndGame();
             Format(g_szCurrentKit, sizeof(g_szCurrentKit), "");
 
@@ -102,7 +111,7 @@ public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
         g_iRoundNumber[MAX_TEAMS_CT]++;
         PrintToChatAll(" \x02[VSBlast] \x01 Counter-Terrorists has won this round!");
 
-        if(GetConVarInt(g_cMaxWinRounds) <= g_iRoundNumber[MAX_TEAMS_CT]){
+        if(g_iRoundNumber[MAX_TEAMS_CT] >= GetConVarInt(g_cMaxWinRounds)){
             EndGame();
             Format(g_szCurrentKit, sizeof(g_szCurrentKit), "")
 
@@ -111,11 +120,8 @@ public Action OnRoundEnd(Event event, const char[] name, bool dontBroadcast) {
         }
 
     }else{
-        g_iRoundNumber[MAX_TEAMS_TR] = 0;
-        g_iRoundNumber[MAX_TEAMS_CT] = 0;
+        RestartRoundCounter();
     }
-
-
 
 }
 
@@ -141,8 +147,7 @@ public void OnWarmupStarted(){
     PrintToChatAll(" \x02[VSBlast] \x01 Type !vb to see available kits.");
 
 
-    g_iRoundNumber[MAX_TEAMS_TR] = 1;
-    g_iRoundNumber[MAX_TEAMS_CT] = 1;
+    RestartRoundCounter();
 
     ServerCommand("mp_warmuptime 900");
     ServerCommand("mp_warmup_pausetimer 1");
@@ -164,14 +169,15 @@ public void OnWarmupEnded(){
         PrintToChatAll(" \x02[VSBlast] \x01 Unable to load weapon config.");
     }
     g_arKitList.Clear();
+    RestartRoundCounter()
 }
 
 public void OnRoundRestart(){
 
     //Your code in here
     PrintToChatAll(" \x02[VSBlast] \x01 Round has been restarted.");
-    g_iRoundNumber[MAX_TEAMS_TR] = 0;
-    g_iRoundNumber[MAX_TEAMS_CT] = 0;
+    RestartRoundCounter();
+    g_bOnFirstRound = true;
 }
 
 
@@ -187,6 +193,12 @@ stock void EndWarmup(){
 
 stock void RestartGame(int sec){
     ServerCommand("mp_restartgame %d", sec);
+    RestartRoundCounter();
+}
+
+stock void RestartRoundCounter(){
+    g_iRoundNumber[MAX_TEAMS_TR] = 0;
+    g_iRoundNumber[MAX_TEAMS_CT] = 0;
 }
 
 stock void EndGame(){
